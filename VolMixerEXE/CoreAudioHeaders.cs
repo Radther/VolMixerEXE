@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 
 // Wrappers around the methonds of Windows Core Audio to make them accessable via C Sharp. 
 // They use GUIDs it seems to reference the APIs, interfaces, etc. No idea how this works exactly but it gives you access so don't question it. 
+// Code based on code from Anders Carstensen: https://stackoverflow.com/a/25584074
 namespace VolMixerEXE
 {
     [ComImport]
