@@ -42,6 +42,9 @@ namespace VolMixerEXE
                 case "appmutetoggle":
                     ToggleMute(processIds);
                     break;
+                case "logprocesses":
+                    WriteCurrentAudioProcessesToFile();
+                    break;
             }
         }
 
@@ -140,6 +143,33 @@ namespace VolMixerEXE
             Marshal.ReleaseComObject(defaultAudioDevice);
             Marshal.ReleaseComObject(sessionManager);
             Marshal.ReleaseComObject(sessions);
+        }
+
+        private static void WriteCurrentAudioProcessesToFile()
+        {
+            // Get all the process Ids
+            Process[] appProcessCollection = Process.GetProcesses();
+            var appProcessIdCollection = getProcessIds(appProcessCollection).ToHashSet();
+
+            // Get all the processes that are an audio session
+            var defaultAudioDevice = VolumeMixer.GetOutputDevice();
+            var sessionManager = VolumeMixer.GetAudioSessionManager2(defaultAudioDevice);
+            var sessions = VolumeMixer.GetAudioSessionEnumerator(sessionManager);
+            var audioControls = VolumeMixer.GetAudioContols(sessions);
+            var audioProcessIdCollection = audioControls.Keys.ToHashSet();
+
+            // Get all the processes that are audio sessions of the focused application
+            var commonProcessIdCollection = appProcessIdCollection.Intersect(audioProcessIdCollection);
+
+            using (System.IO.StreamWriter file =
+            new System.IO.StreamWriter(@".\AudioProcessNames.txt"))
+            {
+                foreach (int pid in commonProcessIdCollection)
+                {
+                    Process p = Process.GetProcessById(pid);
+                    file.WriteLine(p.ProcessName);
+                }
+            }
         }
 
         // Get the process Ids from process objects
