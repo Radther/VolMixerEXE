@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
-namespace AUdioTesting
+namespace VolMixerEXE
 {
     class Program
     {
