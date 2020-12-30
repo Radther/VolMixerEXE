@@ -18,31 +18,55 @@ namespace VolMixerEXE
 
         static void Main(string[] args)
         {
+            // If the process argument is found use the following argument as the process name
+            string processName = null;
+            if (args.Contains("--process"))
+            {
+                processName = args[args.ToList().IndexOf("--process") + 1];
+            }
+
+            // Get ids for the process name (if null use current window)
+            var processIds = GetAppProcessIds(processName).ToHashSet();
+
             // Switch on commands
-            switch (args[0]) {
+            switch (args[0])
+            {
                 case "appvolume":
                     float volumeAmount = float.Parse(args[1]);
-                    ChangeAppVolume(volumeAmount);
+                    ChangeAppVolume(processIds, volumeAmount);
+                    break;
+                case "setappvolume":
+                    float newVolume = float.Parse(args[1]);
+                    SetAppVolume(processIds, newVolume);
                     break;
                 case "appmutetoggle":
-                    ToggleMute();
+                    ToggleMute(processIds);
                     break;
             }
-            
         }
-        // Change the focused apps volume by the amount specified
-        private static void ChangeAppVolume(float volumeAmount)
+
+        // Get the process Ids for a process name (if null use the current window)
+        private static IEnumerable<int> GetAppProcessIds(string processName)
         {
-            // Get the focused apps process Id
-            IntPtr foregroundWindow = GetForegroundWindow();
-            int windowProcessId;
-            GetWindowThreadProcessId(foregroundWindow, out windowProcessId);
+            if (processName == null)
+            {
+                // Get the focused apps process Id
+                IntPtr foregroundWindow = GetForegroundWindow();
+                int windowProcessId;
+                GetWindowThreadProcessId(foregroundWindow, out windowProcessId);
+                // Get the process name
+                var windowProcess = Process.GetProcessById(windowProcessId);
+                processName = windowProcess.ProcessName;
+            }
 
-            // Find all process with the same Id
-            var windowProcess = Process.GetProcessById(windowProcessId);
-            Process[] appProcessCollection = Process.GetProcessesByName(windowProcess.ProcessName);
-            var appProcessIdCollection = getProcessIds(appProcessCollection).ToHashSet();
+            // Get all the ids for the process name
+            Process[] appProcessCollection = Process.GetProcessesByName(processName);
+            return getProcessIds(appProcessCollection);
+        }
 
+        // Change the focused apps volume by the amount specified
+        private static void ChangeAppVolume(HashSet<int> appProcessIdCollection, float volumeAmount)
+        {
             // Get all the processes that are an audio session
             var defaultAudioDevice = VolumeMixer.GetOutputDevice();
             var sessionManager = VolumeMixer.GetAudioSessionManager2(defaultAudioDevice);
@@ -67,18 +91,33 @@ namespace VolMixerEXE
             Marshal.ReleaseComObject(sessions);
         }
 
-        private static void ToggleMute()
+        private static void SetAppVolume(HashSet<int> appProcessIdCollection, float volumeAmount)
         {
-            // Get the focused apps process Id
-            IntPtr foregroundWindow = GetForegroundWindow();
-            int windowProcessId;
-            GetWindowThreadProcessId(foregroundWindow, out windowProcessId);
+            // Get all the processes that are an audio session
+            var defaultAudioDevice = VolumeMixer.GetOutputDevice();
+            var sessionManager = VolumeMixer.GetAudioSessionManager2(defaultAudioDevice);
+            var sessions = VolumeMixer.GetAudioSessionEnumerator(sessionManager);
+            var audioControls = VolumeMixer.GetAudioContols(sessions);
+            var audioProcessIdCollection = audioControls.Keys.ToHashSet();
 
-            // Find all process with the same Id
-            var windowProcess = Process.GetProcessById(windowProcessId);
-            Process[] appProcessCollection = Process.GetProcessesByName(windowProcess.ProcessName);
-            var appProcessIdCollection = getProcessIds(appProcessCollection).ToHashSet();
+            // Get all the processes that are audio sessions of the focused application
+            var commonProcessIdCollection = appProcessIdCollection.Intersect(audioProcessIdCollection);
 
+            // Change the volume of all the audio processes of the focused application
+            foreach (int processId in commonProcessIdCollection)
+            {
+                var volumeControl = audioControls[processId] as ISimpleAudioVolume;
+                VolumeMixer.SetApplicationVolume(volumeControl, Math.Min(100, Math.Max(0, volumeAmount)));
+                Marshal.ReleaseComObject(volumeControl);
+            }
+
+            Marshal.ReleaseComObject(defaultAudioDevice);
+            Marshal.ReleaseComObject(sessionManager);
+            Marshal.ReleaseComObject(sessions);
+        }
+
+        private static void ToggleMute(HashSet<int> appProcessIdCollection)
+        {
             // Get all the processes that are an audio session
             var defaultAudioDevice = VolumeMixer.GetOutputDevice();
             var sessionManager = VolumeMixer.GetAudioSessionManager2(defaultAudioDevice);
