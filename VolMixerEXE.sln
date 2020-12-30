@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VolMixerEXE", "AUdioTesting\VolMixerEXE.csproj", "{6D0161D6-B0F5-43DA-A6BF-D68409E7C2DD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VolMixerEXE", "VolMixerEXE\VolMixerEXE.csproj", "{6D0161D6-B0F5-43DA-A6BF-D68409E7C2DD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
