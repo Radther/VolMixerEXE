@@ -28,6 +28,7 @@ namespace VolMixerEXE
             // Get ids for the process name (if null use current window)
             var processIds = GetAppProcessIds(processName).ToHashSet();
 
+            Console.Write("This is a test");
             // Switch on commands
             switch (args[0])
             {
@@ -57,6 +58,7 @@ namespace VolMixerEXE
                 IntPtr foregroundWindow = GetForegroundWindow();
                 int windowProcessId;
                 GetWindowThreadProcessId(foregroundWindow, out windowProcessId);
+                //System.IO.File.WriteAllText(@"./debug", windowProcessId.ToString());
                 // Get the process name
                 var windowProcess = Process.GetProcessById(windowProcessId);
                 processName = windowProcess.ProcessName;
@@ -65,6 +67,16 @@ namespace VolMixerEXE
             // Get all the ids for the process name
             Process[] appProcessCollection = Process.GetProcessesByName(processName);
             return getProcessIds(appProcessCollection);
+        }
+        private static void ClearVolumeFile()
+        {
+            System.IO.File.WriteAllText(@"./volume", $"");
+        }
+
+        private static void LogVolumeFile(int process, float volume)
+        {
+            Process p = Process.GetProcessById(process);
+            System.IO.File.WriteAllText(@"./volume", $"{p.ProcessName}: {(int)Math.Round(volume)}");
         }
 
         // Change the focused apps volume by the amount specified
@@ -80,12 +92,15 @@ namespace VolMixerEXE
             // Get all the processes that are audio sessions of the focused application
             var commonProcessIdCollection = appProcessIdCollection.Intersect(audioProcessIdCollection);
 
+            ClearVolumeFile();
             // Change the volume of all the audio processes of the focused application
             foreach (int processId in commonProcessIdCollection)
             {
                 var volumeControl = audioControls[processId] as ISimpleAudioVolume;
                 var newVolumeLevel = VolumeMixer.GetApplicationVolume(volumeControl) + volumeAmount;
-                VolumeMixer.SetApplicationVolume(volumeControl, Math.Min(100, Math.Max(0, newVolumeLevel ?? 30f)));
+                newVolumeLevel = Math.Min(100, Math.Max(0, newVolumeLevel ?? 30f));
+                LogVolumeFile(processId, (float)newVolumeLevel);
+                VolumeMixer.SetApplicationVolume(volumeControl, newVolumeLevel ?? 30f);
                 Marshal.ReleaseComObject(volumeControl);
             }
 
